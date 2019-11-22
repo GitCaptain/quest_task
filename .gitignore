@@ -1,0 +1,5 @@
+venv/
+output_folder/
+.idea/
+__pycache__/
+
