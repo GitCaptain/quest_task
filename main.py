@@ -60,6 +60,7 @@ class Comparator:
     def do_compare(self):
         self.load_files_to_compare()
         self.compare_files()
+        self.clear_changes()
         self.write_changes()
 
     def load_files_to_compare(self):
@@ -102,16 +103,27 @@ class Comparator:
                     Constants.NEW_VALUE: end_user[attribute]
                     })
 
+    def clear_changes(self):
+        possible_changes = [Constants.ADDED_USER,
+                            Constants.DELETED_USER,
+                            Constants.DELETED_ATTRIBUTE,
+                            Constants.ADDED_ATTRIBUTE,
+                            Constants.CHANGED_ATTRIBUTE]
+
+        for change in possible_changes:
+            if not self.changes.get(change):
+                self.changes.pop(change)
+
     def compare_files(self):
 
         first_backup_ids = set(self.first_source_data.keys())
         second_backup_ids = set(self.second_source_data.keys())
 
-        self.changes[Constants.DELETED_USER] = list()
         self.changes[Constants.ADDED_USER] = list()
-        self.changes[Constants.CHANGED_ATTRIBUTE] = list()
+        self.changes[Constants.DELETED_USER] = list()
         self.changes[Constants.DELETED_ATTRIBUTE] = list()
         self.changes[Constants.ADDED_ATTRIBUTE] = list()
+        self.changes[Constants.CHANGED_ATTRIBUTE] = list()
 
         for deleted_user_id in first_backup_ids.difference(second_backup_ids):
             self.changes[Constants.DELETED_USER]\
