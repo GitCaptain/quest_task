@@ -37,7 +37,10 @@ def load_path(path):
     full_json = dict()
 
     for file in listfiles:
-        gz = GzipFile(filename=file, mode='rb')
+        try:
+            gz = GzipFile(filename=file, mode='rb')
+        except Exception:
+            raise Exception("cant open file", str(file))
         cur_json = get_formatted_dict(json.load(gz))
         full_json.update(cur_json)
 
@@ -136,14 +139,17 @@ class Comparator:
         json_str = json.dumps(self.changes, indent=2)
         json_bytes = bytes(json_str, encoding=ENCODING)
 
-        with gzopen(self.path_res + '/' + BACKUP, 'wb') as gzfile:
-            gzfile.write(json_bytes)
+        try:
+            with gzopen(self.path_res + '/' + BACKUP, 'wb') as gzfile:
+                gzfile.write(json_bytes)
+        except Exception:
+            raise Exception("Cant open file to write compressed data")
 
 
 if __name__ == '__main__':
 
     if len(sys.argv) < 4:
-        pass
+        raise ValueError("using: first_backup_folder_path second_backup_folder_path target_backup_path")
 
     first_source_path, second_source_path, target_path = sys.argv[1:]
 
