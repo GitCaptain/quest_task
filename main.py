@@ -1,21 +1,31 @@
-import sys
-from path_walker import PathWalker
 import json
-from gzip import GzipFile
-from pprint import pprint
+import sys
+from gzip import GzipFile, open as gzopen
+from path_walker import PathWalker
+
+
+class Constants:
+    VALUE = 'value'
+    ID = 'id'
+    DELETED_USER = 'Deleted'
+    ADDED_USER = 'Added'
+    CHANGED_ATTRIBUTE = 'ChangedAttribute'
+    DELETED_ATTRIBUTE = 'DeletedAttribute'
+    ADDED_ATTRIBUTE = 'AddedAttribute'
+    USER_TYPE = 'userType'
+    OLD_VALUE = 'oldValue'
+    NEW_VALUE = 'newValue'
+    ATTRIBUTE = 'attribute'
 
 
 def get_formatted_dict(dct):
 
-    VALUE = 'value'
-    ID = 'id'
-
-    user_info_list = dct[VALUE]
+    user_info_list = dct[Constants.VALUE]
     dct.clear()
 
     for user_info in user_info_list:
-        id = user_info.pop(ID)
-        dct[id] = user_info
+        uid = user_info.pop(Constants.ID)
+        dct[uid] = user_info
 
     return dct
 
@@ -53,16 +63,81 @@ class Comparator:
         self.first_source_data = load_path(self.path1)
         self.second_source_data = load_path(self.path2)
 
+    def compare_id(self, user_id):
+
+        start_user = self.first_source_data[user_id]
+        end_user = self.second_source_data[user_id]
+
+        first_user_attributes = set(start_user.keys())
+        second_user_attributes = set(end_user.keys())
+
+        added_attributes = second_user_attributes - first_user_attributes
+        deleted_atributes = first_user_attributes - second_user_attributes
+        common_attributes = first_user_attributes.intersection(second_user_attributes)
+
+        for attribute in added_attributes:
+            self.changes[Constants.ADDED_ATTRIBUTE]\
+                .append({
+                Constants.ID: user_id,
+                Constants.ADDED_ATTRIBUTE: attribute
+                })
+
+        for attribute in deleted_atributes:
+            self.changes[Constants.DELETED_ATTRIBUTE]\
+                .append({
+                Constants.ID: user_id,
+                Constants.DELETED_ATTRIBUTE: attribute
+                })
+
+        for attribute in common_attributes:
+            if start_user[attribute] != end_user[attribute]:
+                self.changes[Constants.CHANGED_ATTRIBUTE]\
+                    .append({
+                    Constants.ID: user_id,
+                    Constants.ATTRIBUTE: attribute,
+                    Constants.OLD_VALUE: start_user[attribute],
+                    Constants.NEW_VALUE: end_user[attribute]
+                    })
 
     def compare_files(self):
-        pass
+
+        first_backup_ids = set(self.first_source_data.keys())
+        second_backup_ids = set(self.second_source_data.keys())
+
+        self.changes[Constants.DELETED_USER] = list()
+        self.changes[Constants.ADDED_USER] = list()
+        self.changes[Constants.CHANGED_ATTRIBUTE] = list()
+        self.changes[Constants.DELETED_ATTRIBUTE] = list()
+        self.changes[Constants.ADDED_ATTRIBUTE] = list()
+
+        for deleted_user_id in first_backup_ids.difference(second_backup_ids):
+            self.changes[Constants.DELETED_USER]\
+                .append({
+                Constants.ID: deleted_user_id,
+                Constants.USER_TYPE: self.first_source_data[deleted_user_id][Constants.USER_TYPE]
+                })
+
+        for added_user_id in second_backup_ids.difference(first_backup_ids):
+            self.changes[Constants.ADDED_USER]\
+                .append({
+                Constants.ID: added_user_id,
+                Constants.USER_TYPE: self.second_source_data[added_user_id][Constants.USER_TYPE]
+                })
+
+        for id in first_backup_ids.intersection(second_backup_ids):
+            self.compare_id(id)
 
     def write_changes(self):
 
         CHANGES = 'changes.json'
+        BACKUP = CHANGES + '.gz'
+        ENCODING = 'UTF-8'
 
-        with open(self.path_res + '/' + CHANGES, 'w') as file:
-            pprint(self.changes, stream=file)
+        json_str = json.dumps(self.changes, indent=2)
+        json_bytes = bytes(json_str, encoding=ENCODING)
+
+        with gzopen(self.path_res + '/' + BACKUP, 'wb') as gzfile:
+            gzfile.write(json_bytes)
 
 
 if __name__ == '__main__':
