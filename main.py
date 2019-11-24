@@ -1,6 +1,7 @@
 import json
 import sys
 from gzip import GzipFile, open as gzopen
+
 from path_walker import PathWalker
 
 
@@ -20,6 +21,12 @@ class Constants:
 
 def get_formatted_dict(dct):
 
+    """
+    formats dct which returned from json.load function into more suitable form
+    :param dct: dict to format
+    :return: dct - formatted dict
+    """
+
     user_info_list = dct[Constants.VALUE]
     dct.clear()
 
@@ -31,6 +38,13 @@ def get_formatted_dict(dct):
 
 
 def load_path(path):
+
+    """
+    loads all json files from archives in the path folder and all its subdirectories into one big dictionary full_json
+    :param path: dir to load from
+    :return: full_json - dict containing all loaded json data
+    """
+
     p = PathWalker(path)
     listfiles = p.walk()
 
