@@ -4,11 +4,15 @@ from collections import deque
 
 class PathWalker:
 
+    """
+    Traverses the specified directory and all its subdirectories, and returns a list of the files contained therein
+    """
+
     def __init__(self, root_path):
         self.root_path = Path(root_path)
 
         if not self.root_path.is_dir():
-            raise NotADirectoryError("You cant through a file")
+            raise NotADirectoryError("root_path should be a path to directory")
 
     def walk(self, path=None):
 
