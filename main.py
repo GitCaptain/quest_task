@@ -57,6 +57,12 @@ class Comparator:
         self.second_source_data = dict()
         self.changes = dict()
 
+        self.changes[Constants.ADDED_USER] = list()
+        self.changes[Constants.DELETED_USER] = list()
+        self.changes[Constants.DELETED_ATTRIBUTE] = list()
+        self.changes[Constants.ADDED_ATTRIBUTE] = list()
+        self.changes[Constants.CHANGED_ATTRIBUTE] = list()
+
     def do_compare(self):
         self.load_files_to_compare()
         self.compare_files()
@@ -64,11 +70,19 @@ class Comparator:
         self.write_changes()
 
     def load_files_to_compare(self):
+        """
+        load all json files from given paths
+        :return:
+        """
         self.first_source_data = load_path(self.path1)
         self.second_source_data = load_path(self.path2)
 
     def compare_id(self, user_id):
-
+        """
+        compare attributes for id from first source path with the same id from second source path
+        :param user_id: id to compare
+        :return:
+        """
         start_user = self.first_source_data[user_id]
         end_user = self.second_source_data[user_id]
 
@@ -82,28 +96,33 @@ class Comparator:
         for attribute in added_attributes:
             self.changes[Constants.ADDED_ATTRIBUTE]\
                 .append({
-                Constants.ID: user_id,
-                Constants.ADDED_ATTRIBUTE: attribute
+                    Constants.ID: user_id,
+                    Constants.ADDED_ATTRIBUTE: attribute
                 })
 
         for attribute in deleted_atributes:
             self.changes[Constants.DELETED_ATTRIBUTE]\
                 .append({
-                Constants.ID: user_id,
-                Constants.DELETED_ATTRIBUTE: attribute
+                    Constants.ID: user_id,
+                    Constants.DELETED_ATTRIBUTE: attribute
                 })
 
         for attribute in common_attributes:
             if start_user[attribute] != end_user[attribute]:
                 self.changes[Constants.CHANGED_ATTRIBUTE]\
                     .append({
-                    Constants.ID: user_id,
-                    Constants.ATTRIBUTE: attribute,
-                    Constants.OLD_VALUE: start_user[attribute],
-                    Constants.NEW_VALUE: end_user[attribute]
+                        Constants.ID: user_id,
+                        Constants.ATTRIBUTE: attribute,
+                        Constants.OLD_VALUE: start_user[attribute],
+                        Constants.NEW_VALUE: end_user[attribute]
                     })
 
     def clear_changes(self):
+
+        """
+        if some attribute wasnt changed we dont add it in output
+        :return:
+        """
         possible_changes = [Constants.ADDED_USER,
                             Constants.DELETED_USER,
                             Constants.DELETED_ATTRIBUTE,
@@ -115,28 +134,26 @@ class Comparator:
                 self.changes.pop(change)
 
     def compare_files(self):
+        """
+        compare user in files, checks whether new user was added or some old user was deleted
+        :return:
+        """
 
         first_backup_ids = set(self.first_source_data.keys())
         second_backup_ids = set(self.second_source_data.keys())
 
-        self.changes[Constants.ADDED_USER] = list()
-        self.changes[Constants.DELETED_USER] = list()
-        self.changes[Constants.DELETED_ATTRIBUTE] = list()
-        self.changes[Constants.ADDED_ATTRIBUTE] = list()
-        self.changes[Constants.CHANGED_ATTRIBUTE] = list()
-
         for deleted_user_id in first_backup_ids.difference(second_backup_ids):
             self.changes[Constants.DELETED_USER]\
                 .append({
-                Constants.ID: deleted_user_id,
-                Constants.USER_TYPE: self.first_source_data[deleted_user_id][Constants.USER_TYPE]
+                    Constants.ID: deleted_user_id,
+                    Constants.USER_TYPE: self.first_source_data[deleted_user_id][Constants.USER_TYPE]
                 })
 
         for added_user_id in second_backup_ids.difference(first_backup_ids):
             self.changes[Constants.ADDED_USER]\
                 .append({
-                Constants.ID: added_user_id,
-                Constants.USER_TYPE: self.second_source_data[added_user_id][Constants.USER_TYPE]
+                    Constants.ID: added_user_id,
+                    Constants.USER_TYPE: self.second_source_data[added_user_id][Constants.USER_TYPE]
                 })
 
         for id in first_backup_ids.intersection(second_backup_ids):
@@ -144,15 +161,18 @@ class Comparator:
 
     def write_changes(self):
 
-        CHANGES = 'changes.json'
-        BACKUP = CHANGES + '.gz'
+        """
+        write changes between 2 backups into target file
+        :return:
+        """
+
         ENCODING = 'UTF-8'
 
         json_str = json.dumps(self.changes, indent=2)
         json_bytes = bytes(json_str, encoding=ENCODING)
 
         try:
-            with gzopen(self.path_res + '/' + BACKUP, 'wb') as gzfile:
+            with gzopen(self.path_res, 'wb') as gzfile:
                 gzfile.write(json_bytes)
         except Exception:
             raise Exception("Cant open file to write compressed data")
